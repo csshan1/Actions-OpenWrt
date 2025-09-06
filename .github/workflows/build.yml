@@ -21,12 +21,21 @@ jobs:
             libncurses5-dev libncursesw5-dev zlib1g-dev libssl-dev libelf-dev \
             subversion flex bison g++ gperf
 
-    - name: Download OpenWrt SDK
+    - name: Download OpenWrt SDK (auto detect)
       run: |
         mkdir sdk && cd sdk
-        # 下载 OpenWrt 23.05 SDK (aarch64_cortex-a53)
-        wget https://downloads.openwrt.org/releases/23.05.3/targets/armvirt/64/openwrt-sdk-23.05.3-armvirt-64_gcc-12.3.0_musl.Linux-x86_64.tar.xz
-        tar -xJf openwrt-sdk-*.tar.xz --strip-components=1
+        BASE_URL="https://downloads.openwrt.org/releases/23.05.3/targets/armvirt/64"
+        MIRROR_URL="https://mirrors.tuna.tsinghua.edu.cn/openwrt/releases/23.05.3/targets/armvirt/64"
+
+        # 自动获取 SDK 文件名
+        FILE=$(wget -qO- $BASE_URL/ | grep -oE 'openwrt-sdk-23\.05\.3-armvirt-64[^"]+Linux-x86_64\.tar\.xz' | head -n1)
+
+        echo "Detected SDK file: $FILE"
+
+        # 尝试官方源，失败则用清华镜像
+        wget --tries=3 --timeout=30 $BASE_URL/$FILE || wget --tries=3 --timeout=30 $MIRROR_URL/$FILE
+
+        tar -xJf $FILE --strip-components=1
 
     - name: Add iKoolProxy package
       run: |
