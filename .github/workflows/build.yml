@@ -26,6 +26,12 @@ jobs:
           wget https://downloads.openwrt.org/releases/23.05.3/targets/x86/64/openwrt-sdk-23.05.3-x86-64_gcc-12.3.0_musl.Linux-x86_64.tar.xz
           tar -xJf openwrt-sdk-*.tar.xz --strip-components=1
 
+      - name: Update and install feeds
+        run: |
+          cd sdk
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
       - name: Add ilxp iKoolProxy package
         run: |
           cd sdk/package
