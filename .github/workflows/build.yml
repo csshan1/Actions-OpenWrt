@@ -1,4 +1,4 @@
-name: Build ilxp luci-app-ikoolproxy for aarch64_cortex-a53
+name: Build ilxp luci-app-ikoolproxy (aarch64_cortex-a53)
 
 on:
   workflow_dispatch:
@@ -20,24 +20,11 @@ jobs:
               libncurses5-dev libncursesw5-dev zlib1g-dev libssl-dev libelf-dev \
               subversion flex bison g++ gperf
 
-      - name: Download OpenWrt SDK (release/snapshot fallback)
+      - name: Download OpenWrt SDK (use x86_64 generic)
         run: |
           mkdir sdk && cd sdk
-          REL="https://downloads.openwrt.org/releases/23.05.3/targets/armvirt/64"
-          SNAP="https://downloads.openwrt.org/snapshots/targets/armvirt/64"
-          MR_REL="https://mirrors.tuna.tsinghua.edu.cn/openwrt/releases/23.05.3/targets/armvirt/64"
-          MR_SNAP="https://mirrors.tuna.tsinghua.edu.cn/openwrt/snapshots/targets/armvirt/64"
-
-          FILE=$(wget -qO- $REL/ | grep -oE 'openwrt-sdk-[^"]+Linux-x86_64\.tar\.xz' | head -n1)
-          BASE=$REL; MIRROR=$MR_REL
-          if [ -z "$FILE" ]; then
-            echo "⚠️ Release SDK not found, try snapshot"
-            FILE=$(wget -qO- $SNAP/ | grep -oE 'openwrt-sdk-[^"]+Linux-x86_64\.tar\.xz' | head -n1)
-            BASE=$SNAP; MIRROR=$MR_SNAP
-          fi
-          echo "✅ Using SDK: $FILE"
-          wget --tries=3 --timeout=30 $BASE/$FILE || wget --tries=3 --timeout=30 $MIRROR/$FILE
-          tar -xJf $FILE --strip-components=1
+          wget https://downloads.openwrt.org/releases/23.05.3/targets/x86/64/openwrt-sdk-23.05.3-x86-64_gcc-12.3.0_musl.Linux-x86_64.tar.xz
+          tar -xJf openwrt-sdk-*.tar.xz --strip-components=1
 
       - name: Add ilxp iKoolProxy package
         run: |
