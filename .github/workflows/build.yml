@@ -1,4 +1,4 @@
-name: Build iKoolProxy for aarch64_cortex-a53
+name: Build luci-app-ikoolproxy (aarch64_cortex-a53)
 
 on:
   workflow_dispatch:   # 手动触发
@@ -12,7 +12,7 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v4   # 同时更新 checkout 版本
+      uses: actions/checkout@v4
 
     - name: Initialize build environment
       run: |
@@ -21,17 +21,47 @@ jobs:
             libncurses5-dev libncursesw5-dev zlib1g-dev libssl-dev libelf-dev \
             subversion flex bison g++ gperf
 
-    - name: Get OpenWrt source
+    - name: Download OpenWrt SDK
       run: |
-        git clone https://github.com/openwrt/openwrt.git
-        cd openwrt
-        git checkout openwrt-23.05
-
-    - name: Update feeds
-      run: |
-        cd openwrt
-        ./scripts/feeds update -a
-        ./scripts/feeds install -a
+        mkdir sdk && cd sdk
+        # 下载 OpenWrt 23.05 SDK (aarch64_cortex-a53)
+        wget https://downloads.openwrt.org/releases/23.05.3/targets/armvirt/64/openwrt-sdk-23.05.3-armvirt-64_gcc-12.3.0_musl.Linux-x86_64.tar.xz
+        tar -xJf openwrt-sdk-*.tar.xz --strip-components=1
 
     - name: Add iKoolProxy package
       run: |
+        cd sdk/package
+        git clone https://github.com/iwrt/luci-app-ikoolproxy.git
+
+    - name: Configure SDK
+      run: |
+        cd sdk
+        echo "CONFIG_PACKAGE_luci-app-ikoolproxy=m" >> .config
+        make defconfig
+
+    - name: Build iKoolProxy
+      run: |
+        cd sdk
+        make package/luci-app-ikoolproxy/compile V=s -j$(nproc)
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: luci-app-ikoolproxy-ipk-aarch64_cortex-a53
+        path: |
+          sdk/bin/packages/*/base/luci-app-ikoolproxy*.ipk
+          sdk/bin/packages/*/*/luci-app-ikoolproxy*.ipk
+
+    - name: Create/Update Release
+      uses: softprops/action-gh-release@v2
+      if: success()
+      with:
+        tag_name: ikoolproxy-aarch64
+        name: "luci-app-ikoolproxy (aarch64_cortex-a53)"
+        draft: false
+        prerelease: false
+        files: |
+          sdk/bin/packages/*/base/luci-app-ikoolproxy*.ipk
+          sdk/bin/packages/*/*/luci-app-ikoolproxy*.ipk
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
