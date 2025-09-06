@@ -1,20 +1,18 @@
-name: Build luci-app-ikoolproxy (aarch64_cortex-a53)
+name: Build ilxp luci-app-ikoolproxy for aarch64_cortex-a53
 
 on:
-  workflow_dispatch:   # 手动触发
+  workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-22.04
-
     steps:
-      - name: Checkout
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Initialize build environment
+      - name: Install build deps
         run: |
           sudo apt update
           sudo apt install -y build-essential git wget curl unzip python3 rsync gawk \
@@ -24,33 +22,26 @@ jobs:
       - name: Download OpenWrt SDK (release/snapshot fallback)
         run: |
           mkdir sdk && cd sdk
-          REL_URL="https://downloads.openwrt.org/releases/23.05.3/targets/armvirt/64"
-          SNAPSHOT_URL="https://downloads.openwrt.org/snapshots/targets/armvirt/64"
-          MIRROR_REL="https://mirrors.tuna.tsinghua.edu.cn/openwrt/releases/23.05.3/targets/armvirt/64"
-          MIRROR_SNAP="https://mirrors.tuna.tsinghua.edu.cn/openwrt/snapshots/targets/armvirt/64"
+          REL="https://downloads.openwrt.org/releases/23.05.3/targets/armvirt/64"
+          SNAP="https://downloads.openwrt.org/snapshots/targets/armvirt/64"
+          MR_REL="https://mirrors.tuna.tsinghua.edu.cn/openwrt/releases/23.05.3/targets/armvirt/64"
+          MR_SNAP="https://mirrors.tuna.tsinghua.edu.cn/openwrt/snapshots/targets/armvirt/64"
 
-          # 尝试从 release 目录找 SDK
-          FILE=$(wget -qO- $REL_URL/ | grep -oE 'openwrt-sdk-[^"]+Linux-x86_64\.tar\.xz' | head -n1)
-
-          BASE_URL=$REL_URL
-          MIRROR_URL=$MIRROR_REL
-
-          # 如果 release 找不到，就用 snapshot
+          FILE=$(wget -qO- $REL/ | grep -oE 'openwrt-sdk-[^"]+Linux-x86_64\.tar\.xz' | head -n1)
+          BASE=$REL; MIRROR=$MR_REL
           if [ -z "$FILE" ]; then
-            echo "⚠️ Release SDK not found, switching to snapshot..."
-            FILE=$(wget -qO- $SNAPSHOT_URL/ | grep -oE 'openwrt-sdk-[^"]+Linux-x86_64\.tar\.xz' | head -n1)
-            BASE_URL=$SNAPSHOT_URL
-            MIRROR_URL=$MIRROR_SNAP
+            echo "No release SDK, try snapshot"
+            FILE=$(wget -qO- $SNAP/ | grep -oE 'openwrt-sdk-[^"]+Linux-x86_64\.tar\.xz' | head -n1)
+            BASE=$SNAP; MIRROR=$MR_SNAP
           fi
-
-          echo "✅ Detected SDK file: $FILE"
-          wget --tries=3 --timeout=30 $BASE_URL/$FILE || wget --tries=3 --timeout=30 $MIRROR_URL/$FILE
+          echo "Using SDK: $FILE"
+          wget --tries=3 --timeout=30 $BASE/$FILE || wget --tries=3 --timeout=30 $MIRROR/$FILE
           tar -xJf $FILE --strip-components=1
 
-      - name: Add iKoolProxy package
+      - name: Add ilxp iKoolProxy package
         run: |
           cd sdk/package
-          git clone https://github.com/iwrt/luci-app-ikoolproxy.git
+          git clone https://github.com/ilxp/luci-app-ikoolproxy.git
 
       - name: Configure SDK
         run: |
@@ -66,7 +57,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: luci-app-ikoolproxy-ipk-aarch64_cortex-a53
+          name: luci-app-ikoolproxy-ipk
           path: |
             sdk/bin/packages/*/base/luci-app-ikoolproxy*.ipk
             sdk/bin/packages/*/*/luci-app-ikoolproxy*.ipk
@@ -76,7 +67,10 @@ jobs:
         if: success()
         with:
           tag_name: ikoolproxy-aarch64
-          name: "luci-app-ikoolproxy (aarch64_cortex-a53)"
+          name: "ilxp luci-app-ikoolproxy (aarch64_cortex-a53)"
+          body: |
+            Build time: ${{ now() }}
+            Commit: ${{ github.sha }}
           draft: false
           prerelease: false
           files: |
