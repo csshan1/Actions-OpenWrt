@@ -12,7 +12,7 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4   # 同时更新 checkout 版本
 
     - name: Initialize build environment
       run: |
@@ -35,29 +35,3 @@ jobs:
 
     - name: Add iKoolProxy package
       run: |
-        cd openwrt/package
-        git clone https://github.com/iwrt/luci-app-ikoolproxy.git
-
-    - name: Configure build
-      run: |
-        cd openwrt
-        # 设置目标架构为 aarch64_cortex-a53
-        echo "CONFIG_TARGET_armvirt=y" >> .config
-        echo "CONFIG_TARGET_armvirt_64=y" >> .config
-        echo "CONFIG_TARGET_armvirt_64_Default=y" >> .config
-        echo "CONFIG_TARGET_ARCH_PACKAGES=aarch64_cortex-a53" >> .config
-        echo "CONFIG_PACKAGE_luci-app-ikoolproxy=m" >> .config
-        make defconfig
-
-    - name: Build package
-      run: |
-        cd openwrt
-        make package/luci-app-ikoolproxy/compile V=s -j$(nproc)
-
-    - name: Upload artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: ikoolproxy-ipk-aarch64_cortex-a53
-        path: |
-          openwrt/bin/packages/*/base/luci-app-ikoolproxy*.ipk
-          openwrt/bin/packages/*/*/luci-app-ikoolproxy*.ipk
